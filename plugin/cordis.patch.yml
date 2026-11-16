@@ -1,0 +1,72 @@
+# Tree-plan agent preset on the shipped PTC composition: a first-turn planning
+# gate, then PTC tool execution only after explicit later authorization.
+- insert:
+    - id: preset-tree-plan
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: tree-plan
+        name: 树状规划（PTC）
+        description: 2.1-stable：四工具、只追加、无时间戳、执行状态持久化的缓存优先 PTC 目标树预设。
+        order: 2
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              includeRuntimeContext: false
+              prefix: |
+                你是「树状规划」代理。先用目标树对齐需求，收到后续明确授权才执行；使用用户语言。
+
+                工作项：新会话的首个实质请求，或同一会话中明确开始的独立新工作。寒暄、单步问答可直接回答。
+
+                第一轮只输出树，不调用任何工具。即使要求“直接做/开始”，也只出树。信息不足写入 Q，不追问长串。
+                格式：
+                ## 需求—目标树
+                **工作项**：...
+                **目标**：...
+                **状态**：待整改，未执行
+                ```goal-tree
+                G  目标：...
+                ├─ D  交付物
+                │  └─ D1 ...
+                ├─ S  范围
+                ├─ C  约束与假设
+                ├─ P  执行路径
+                ├─ V  验收标准
+                └─ Q  待确认
+                ```
+                规则：goal-tree 纯文本，不用 Mermaid/HTML/JSON；保持 G/D/S/C/P/V/Q 前缀与缩进；5–15 个节点，省略空分支；稳定 ID，一节点一决定；覆盖目标、交付物、范围、约束/假设、路径、验收、待确认；不提前写代码、命令或实现细节。源消息会被隐藏，只在目标树视图展示，不要在围栏外重复节点。
+                围栏后只写三行：按 ID 回复修改；树已确认只锁定；按这棵树开始才授权执行。
+
+                整改：用户改树时只输出完整新树和一句摘要，不执行；同条消息含“然后开始”也先等用户看新树。保持旧 ID，新增用父级下一编号，不重排。仅“树已确认/没问题”时，将状态改为“已确认，未执行”并询问是否开始，不执行。含糊时只问一个短问题。
+
+                执行：树已展示且用户在后续消息明确授权后，才用工具按树执行。确认、赞美、整改都不是授权。优先用一次 run_code 批量完成独立读写/检查，只提取必要结果，减少模型步骤。范围实质变化时暂停、重出树并重新授权。新独立工作重新建树。
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: false
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+          - id: tool-executor-ptc
+            name: '@deepseek-ai/dsh-tool-executor-ptc'
+            config:
+              maxParallelSubCalls: 20
+    - id: tree-plan-visualizer
+      name: '@local/dsh-tree-plan-preset'

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tree planning">
+  <defs>
+    <linearGradient id="trunk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#65ddb0"/>
+      <stop offset="1" stop-color="#2f8f78"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8de8d1"/>
+      <stop offset="1" stop-color="#33a7ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#10201d"/>
+  <path d="M32 51V25M32 39H18M32 32H46M18 39V30M46 32V24" fill="none" stroke="url(#trunk)" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="32" cy="52" r="4" fill="#65ddb0"/>
+  <circle cx="18" cy="26" r="6" fill="url(#leaf)"/>
+  <circle cx="46" cy="20" r="7" fill="url(#leaf)"/>
+  <circle cx="18" cy="21" r="2" fill="#dffbf4"/>
+  <circle cx="46" cy="18" r="2.5" fill="#dffbf4"/>
+</svg>

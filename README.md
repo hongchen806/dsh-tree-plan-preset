@@ -1,2 +1,70 @@
-# dsh-tree-plan-preset
-这是一个dsh的agent预设，在这个预设下的第一轮对话会先生成可编辑的树状图，在“目标树”页面将树状图改写完毕后点击“开始运行”后AI才会开始工作 / This is an agent preset for DSH. On the first turn, it produces an editable tree structure. Once you have edited the tree on the “Goal Tree” page and click “Start Run”, the AI starts its work.
+# 树状规划（PTC）· DSH agent 预设
+
+> 让 agent 先给你一棵**可编辑的目标树**，你改完、点了「开始运行」，它才动手。
+
+面向 [DeepSeek Harness](https://deepseek.com) 桌面版 **44.7.0**（Windows）。当前版本 **2.1.0-stable**。
+
+## 它解决什么问题
+
+大多数 agent 出问题，不是因为不会做，而是因为**太早开始做**：你还在描述需求，它已经在扫目录、改文件了。这个预设把动手从默认动作改成需要你批准的动作：
+
+1. **首轮只出树**——不给工具、不读文件、不跑命令，只输出一棵 5–15 个节点的需求—目标树；
+2. **你在树上改**——每个节点有稳定 ID（G/D/S/C/P/V/Q），可以直接在「目标树」视图里改，也能按 ID 回话；
+3. **你点「开始运行」才算授权**——它把当前编辑后的完整树通过会话发给 agent，这时才真正执行。
+
+## 2.1 的三件事
+
+**缓存优先**。PTC 执行器是唯一的直接工具面，实际工具收敛为读、写、编辑、运行四个；不挂时间上下文、不注入每轮变化的时间戳、不启用工具结果裁剪、会话保持只追加。目的是让 prompt 前缀尽量稳定，把缓存打满、成本压低。PTC 子调用并行上限 20。
+
+**目标是可操作的图，不是一段文本**。内联编辑、撤销栈、缩放、右键平移、自由拖拽、节点合并/拆分都在客户端完成；布局与分组做记忆化，拖拽期间直接改 DOM，不触发整树重渲染。
+
+**执行状态是持久的**。点过「开始运行」之后，切到别的视图再回来，树仍然标着「已发送启动 / 执行中 / 已执行」。目标树独占自己的消息位，不会把对话正文刷满。
+
+## 装法（三步）
+
+1. 从 [Releases](https://github.com/hongchen806/dsh-tree-plan-preset/releases) 下载 `dsh-tree-plan-preset-2.1.0-stable.zip`，**完整解压**（别在压缩包里直接双击脚本）。
+2. 解压目录里右键 `安装.ps1` → **使用 PowerShell 运行**。被策略拦住就用：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\安装.ps1
+```
+
+3. **完全退出 DSH**（含托盘图标），再重新打开。
+
+脚本做三件事：把插件复制到 `%USERPROFILE%\.dsh\local-plugins\`、在 profile 的 `package.json` 里登记依赖与 `dsh.profile.bundles`、在 `node_modules\@local\` 建链接；原文件备份为 `package.json.bak-tree-plan`。不碰你的模型设置、密钥、主题和对话记录。
+
+卸载：右键 `卸载.ps1` 跑一遍，重启 DSH，配置复原。
+
+## 装完怎么验
+
+新建会话选预设「树状规划（PTC）」，然后：
+
+| 你发 | 应该发生 |
+| --- | --- |
+| 「帮我把下周的出差安排理一下」 | 只出一棵树，界面里没有工具调用 |
+| 在「目标树」视图里改某个节点 | 树就地更新，可以撤销 |
+| 直接回「Q1 改为：只排高铁」 | 重发完整新树 + 一句变更摘要，仍不动手 |
+| 点「开始运行」 | 树被发出去，状态转「执行中」，这才开始干活 |
+
+## 已知局限
+
+- 只适配 DSH 桌面版 **44.7.0 / Windows**；其他版本 `dsh.profile.bundles` 结构可能不同。
+- 「目标树」视图依赖同版本客户端组件；组件不匹配时**预设本身仍生效**，树是纯文本，照常可读可改。
+- 它是提示词约束，不是硬沙箱：模型仍可能偏离。上一版（2.0）的实测里出现过两次偏离——含糊表态被当成授权开工、强指令下首轮偶尔直接动手；2.1 改写了提示词，但**尚未重新测过**这两项。
+- `tests/` 只在你本地的源目录里，分发包不含测试文件。
+
+## 目录
+
+```
+plugin/                预设本体
+  cordis.patch.yml     预设声明：persona 与工具组成
+  index.js             Host 侧：把 goal-tree 围栏解析成会话投影
+  client.js            Web 侧：目标树视图、编辑与交互
+  tree-parser.js       纯文本树解析
+安装.ps1 / 卸载.ps1
+LICENSE  .gitignore
+```
+
+## License
+
+MIT
